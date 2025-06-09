@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package orderbook;
+
+service OrderBookService {
+  rpc StreamOrderUpdates(Empty) returns (stream OrderUpdate);
+}
+
+message Empty {}
+
+message OrderUpdate {
+  string instrument = 1;
+  repeated PriceLevel bids = 2;
+  repeated PriceLevel asks = 3;
+  uint64 timestamp = 4;
+}
+
+message PriceLevel {
+  double price = 1;
+  double quantity = 2;
+}
