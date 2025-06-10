@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 
+
 using json = nlohmann::json;
 typedef websocketpp::client<websocketpp::config::asio_tls_client> client;
 typedef websocketpp::config::asio_client::message_type::ptr message_ptr;
@@ -43,6 +44,8 @@ void WebSocketClient::connect(const std::string& uri) {
         };
         c.send(hdl, auth.dump(), websocketpp::frame::opcode::text);
 
+        sleep(1); // Wait for authentication to complete
+
         // Subscribe after authentication
         json subscribe = {
             {"type", "subscribe"},
@@ -51,39 +54,55 @@ void WebSocketClient::connect(const std::string& uri) {
         c.send(hdl, subscribe.dump(), websocketpp::frame::opcode::text);
     });
 
-    c.set_message_handler([](websocketpp::connection_hdl, message_ptr msg) {
+    const size_t DEPTH_LIMIT = 10;
+
+    c.set_message_handler([&](websocketpp::connection_hdl, message_ptr msg) {
         try {
             const std::string& payload_str = msg->get_payload();
             auto payload = json::parse(payload_str);
 
             std::string type = payload.value("type", "unknown");
 
-            if (type == "snapshot") {
-                std::cout << "Received snapshot for: " << payload["product_id"] << "\n";
-                std::cout << "Top bid: " << payload["bids"][0][0] << " x " << payload["bids"][0][1] << "\n";
-                std::cout << "Top ask: " << payload["asks"][0][0] << " x " << payload["asks"][0][1] << "\n";
-            }
-            else if (type == "update") {
-                std::cout << "Update received for: " << payload["product_id"] << "\n";
-                if (payload.contains("bids")) {
-                    for (const auto& level : payload["bids"]) {
-                        std::cout << "  Bid: " << level[0] << " x " << level[1] << "\n";
-                    }
+            auto print_levels = [DEPTH_LIMIT](const json& levels, bool is_bid) {
+                std::vector<json> sorted_levels = levels;
+
+                std::sort(sorted_levels.begin(), sorted_levels.end(), [is_bid](const json& a, const json& b) {
+                    return is_bid ? (a[0].get<double>() > b[0].get<double>())
+                                : (a[0].get<double>() < b[0].get<double>());
+                });
+
+                for (size_t i = 0; i < std::min(sorted_levels.size(), DEPTH_LIMIT); ++i) {
+                    const auto& level = sorted_levels[i];
+                    std::cout << (is_bid ? "  Bid" : "  Ask")
+                            << ": " << level[0] << " x " << level[1] << "\n";
                 }
-                if (payload.contains("asks")) {
-                    for (const auto& level : payload["asks"]) {
-                        std::cout << "  Ask: " << level[0] << " x " << level[1] << "\n";
-                    }
+            };
+
+            if (payload.contains("payload") &&
+                (payload["payload"].contains("bids") || payload["payload"].contains("asks"))) {
+
+                const auto& data = payload["payload"];
+                std::cout << "\n📈 Orderbook Update\n";
+
+                if (data.contains("bids")) {
+                    std::cout << "Top Bids:\n";
+                    print_levels(data["bids"], true);
                 }
-            }
-            else {
-                std::cout << "Other message: " << type << "\n";
+                if (data.contains("asks")) {
+                    std::cout << "Top Asks:\n";
+                    print_levels(data["asks"], false);
+                }
+            } else {
+                std::cout << "\n🔍 Non-orderbook message received:\n";
                 std::cout << payload.dump(2) << "\n";
             }
         } catch (const std::exception& e) {
-            std::cerr << "JSON parse error: " << e.what() << "\n";
+            std::cerr << "❌ JSON parse error: " << e.what() << "\n";
         }
     });
+
+
+
 
     websocketpp::lib::error_code ec;
     client::connection_ptr con = c.get_connection(uri, ec);
