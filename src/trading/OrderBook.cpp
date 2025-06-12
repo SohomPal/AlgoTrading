@@ -70,3 +70,24 @@ void OrderBook::setOrderBook(const nlohmann::json& json) {
         }
     }
 }
+
+std::vector<Order> OrderBook::getBids() const {
+    std::vector<Order> allBids;
+    for (auto it = bids.rbegin(); it != bids.rend(); ++it) { // Highest price first
+        for (const auto& order : it->second) {
+            allBids.push_back(order);
+        }
+    }
+    return allBids;
+}
+
+std::vector<Order> OrderBook::getAsks() const {
+    std::vector<Order> allAsks;
+    for (const auto& [price, queue] : asks) { // Lowest price first
+        for (const auto& order : queue) {
+            allAsks.push_back(order);
+        }
+    }
+    return allAsks;
+}
+

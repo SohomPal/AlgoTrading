@@ -20,6 +20,8 @@ include_directories(
 add_executable(sfox_data_collector
     src/main.cpp
     src/WebSocketClient.cpp
+    src/trading/Order.cpp
+    src/trading/OrderBook.cpp
 )
 
 target_link_libraries(sfox_data_collector
