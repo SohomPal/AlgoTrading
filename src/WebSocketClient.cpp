@@ -1,4 +1,5 @@
 #include "WebSocketClient.h"
+#include "trading/OrderBook.h"
 #include <websocketpp/config/asio_client.hpp>
 #include <websocketpp/client.hpp>
 
@@ -19,6 +20,10 @@ typedef websocketpp::config::asio_client::message_type::ptr message_ptr;
 
 std::unordered_map<std::string, std::string> loadConfig(const std::string& path);
 std::mutex output_mutex; // For thread-safe console output
+
+// Global map of instrument -> OrderBook
+std::unordered_map<std::string, OrderBook> global_orderbooks;
+std::mutex orderbook_mutex; // For thread-safe orderbook access
 
 void connectToInstrument(const std::string& instrument) {
     const std::string uri = "wss://ws.sfox.com/ws";
@@ -66,43 +71,55 @@ void connectToInstrument(const std::string& instrument) {
 
             std::string type = payload.value("type", "unknown");
 
-            auto print_levels = [DEPTH_LIMIT, instrument](const json& levels, bool is_bid) {
-                std::vector<json> sorted_levels = levels;
-
-                std::sort(sorted_levels.begin(), sorted_levels.end(), [is_bid](const json& a, const json& b) {
-                    return is_bid ? (a[0].get<double>() > b[0].get<double>())
-                                : (a[0].get<double>() < b[0].get<double>());
-                });
-
-                for (size_t i = 0; i < std::min(sorted_levels.size(), DEPTH_LIMIT); ++i) {
-                    const auto& level = sorted_levels[i];
-                    std::cout << "  [" << instrument << "] " 
-                            << (is_bid ? "Bid" : "Ask")
-                            << ": " << level[0] << " x " << level[1] << "\n";
-                }
-            };
-
             if (payload.contains("payload") &&
                 (payload["payload"].contains("bids") || payload["payload"].contains("asks"))) {
 
                 const auto& data = payload["payload"];
                 
+                // Create JSON object for the orderbook with top 10 bids and asks
+                json orderbook_data;
+                
+                if (data.contains("bids")) {
+                    std::vector<json> sorted_bids = data["bids"];
+                    std::sort(sorted_bids.begin(), sorted_bids.end(), [](const json& a, const json& b) {
+                        return a[0].get<double>() > b[0].get<double>(); // Sort bids descending
+                    });
+                    
+                    // Take top 10 bids
+                    json top_bids = json::array();
+                    for (size_t i = 0; i < std::min(sorted_bids.size(), static_cast<size_t>(10)); ++i) {
+                        top_bids.push_back(sorted_bids[i]);
+                    }
+                    orderbook_data["bids"] = top_bids;
+                }
+                
+                if (data.contains("asks")) {
+                    std::vector<json> sorted_asks = data["asks"];
+                    std::sort(sorted_asks.begin(), sorted_asks.end(), [](const json& a, const json& b) {
+                        return a[0].get<double>() < b[0].get<double>(); // Sort asks ascending
+                    });
+                    
+                    // Take top 10 asks
+                    json top_asks = json::array();
+                    for (size_t i = 0; i < std::min(sorted_asks.size(), static_cast<size_t>(10)); ++i) {
+                        top_asks.push_back(sorted_asks[i]);
+                    }
+                    orderbook_data["asks"] = top_asks;
+                }
+                
+                // Update the global orderbook
+                {
+                    std::lock_guard<std::mutex> lock(orderbook_mutex);
+                    global_orderbooks[instrument].setOrderBook(orderbook_data);
+                }
+                
                 {
                     std::lock_guard<std::mutex> lock(output_mutex);
-                    std::cout << "\n📈 [" << instrument << "] Orderbook Update\n";
-
-                    if (data.contains("bids")) {
-                        std::cout << "Top Bids:\n";
-                        print_levels(data["bids"], true);
-                    }
-                    if (data.contains("asks")) {
-                        std::cout << "Top Asks:\n";
-                        print_levels(data["asks"], false);
-                    }
+                    std::cout << "📈 [" << instrument << "] Orderbook updated\n";
                 }
             } else {
                 std::lock_guard<std::mutex> lock(output_mutex);
-                std::cout << "\n🔍 [" << instrument << "] Non-orderbook message received:\n";
+                std::cout << "🔍 [" << instrument << "] Non-orderbook message received:\n";
                 std::cout << payload.dump(2) << "\n";
             }
         } catch (const std::exception& e) {
@@ -144,6 +161,14 @@ void WebSocketClient::connect(const std::vector<std::string>& instruments) {
     
     std::cout << "🚀 Starting " << max_connections << " WebSocket connections...\n";
     
+    // Initialize orderbooks for each instrument
+    {
+        std::lock_guard<std::mutex> lock(orderbook_mutex);
+        for (size_t i = 0; i < max_connections; ++i) {
+            global_orderbooks[instruments[i]] = OrderBook();
+        }
+    }
+    
     std::vector<std::thread> threads;
     threads.reserve(max_connections);
 
@@ -161,6 +186,32 @@ void WebSocketClient::connect(const std::vector<std::string>& instruments) {
             thread.join();
         }
     }
+}
+
+// Function to get orderbook for a specific instrument (thread-safe)
+OrderBook WebSocketClient::getOrderBook(const std::string& instrument) {
+    extern std::unordered_map<std::string, OrderBook> global_orderbooks;
+    extern std::mutex orderbook_mutex;
+    
+    std::lock_guard<std::mutex> lock(orderbook_mutex);
+    auto it = global_orderbooks.find(instrument);
+    if (it != global_orderbooks.end()) {
+        return it->second;
+    }
+    return OrderBook(); // Return empty orderbook if not found
+}
+
+// Function to get all available instruments
+std::vector<std::string> WebSocketClient::getAvailableInstruments() {
+    extern std::unordered_map<std::string, OrderBook> global_orderbooks;
+    extern std::mutex orderbook_mutex;
+    
+    std::lock_guard<std::mutex> lock(orderbook_mutex);
+    std::vector<std::string> instruments;
+    for (const auto& pair : global_orderbooks) {
+        instruments.push_back(pair.first);
+    }
+    return instruments;
 }
 
 std::unordered_map<std::string, std::string> loadConfig(const std::string& path) {

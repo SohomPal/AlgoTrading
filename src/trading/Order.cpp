@@ -1,3 +1,3 @@
 #include "trading/Order.h"
 
-Order::Order(double p, long v) : price(p), volume(v) {}
+Order::Order(double p, double v) : price(p), volume(v) {}
