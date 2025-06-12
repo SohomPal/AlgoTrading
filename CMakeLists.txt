@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD 17)
 # Enable standalone Asio (NO Boost)
 add_definitions(-DASIO_STANDALONE -D_WEBSOCKETPP_CPP11_STL_)
 
+# Ignore deprecation warnings from WebSocket++ and Asio
+add_compile_options(-Wno-deprecated-declarations)
+
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/websocketpp

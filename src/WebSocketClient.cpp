@@ -1,8 +1,4 @@
 #include "WebSocketClient.h"
-
-#define ASIO_STANDALONE
-#define _WEBSOCKETPP_CPP11_STL_
-
 #include <websocketpp/config/asio_client.hpp>
 #include <websocketpp/client.hpp>
 
