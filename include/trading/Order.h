@@ -2,7 +2,7 @@
 
 struct Order {
     double price;
-    long volume;
+    double volume;
 
     Order(double p, double v);
 };

@@ -27,7 +27,7 @@ void printOrderBookState(const std::string& instrument, const OrderBook& orderbo
         for (const auto& bid : bids) {
             if (count >= 5) break;
             std::cout << "  " << std::fixed << std::setprecision(2) 
-                      << "$" << bid.price << " x " << bid.volume << "\n";
+                      << "$" << bid.price << std::setprecision(6)  << " x " << bid.volume << "\n";
             count++;
         }
         
@@ -37,7 +37,7 @@ void printOrderBookState(const std::string& instrument, const OrderBook& orderbo
         for (const auto& ask : asks) {
             if (count >= 5) break;
             std::cout << "  " << std::fixed << std::setprecision(2) 
-                      << "$" << ask.price << " x " << ask.volume << "\n";
+                      << "$" << ask.price << std::setprecision(6) << " x " << ask.volume << "\n";
             count++;
         }
         

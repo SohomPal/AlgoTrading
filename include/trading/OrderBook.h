@@ -7,9 +7,9 @@
 
 class OrderBook {
 public:
-    void addBid(double price, long volume);
+    void addBid(double price, double volume);
 
-    void addAsk(double price, long volume);
+    void addAsk(double price, double volume);
 
     double bestBid() const;
 
