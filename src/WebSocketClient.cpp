@@ -232,3 +232,7 @@ std::unordered_map<std::string, std::string> loadConfig(const std::string& path)
     }
     return config;
 }
+
+bool WebSocketClient::hasOrderBook(const std::string& symbol) {
+    return global_orderbooks.find(symbol) != global_orderbooks.end();
+}

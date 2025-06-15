@@ -8,7 +8,9 @@
                 "${workspaceFolder}/third_party/json",
                 "/opt/homebrew/include",
                 "/Library/Developer/CommandLineTools/usr/include/c++/v1",
-                "${workspaceFolder}/third_party"
+                "${workspaceFolder}/third_party",
+                "${workspaceFolder}/grpc",
+                "${workspaceFolder}"
             ],
             "defines": [
                 "ASIO_STANDALONE",

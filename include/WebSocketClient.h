@@ -11,4 +11,5 @@ public:
     // Static methods to access orderbooks from anywhere
     static OrderBook getOrderBook(const std::string& instrument);
     static std::vector<std::string> getAvailableInstruments();
+    static bool hasOrderBook(const std::string& symbol);
 };
