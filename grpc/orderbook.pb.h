@@ -638,14 +638,14 @@ class Order final : public ::google::protobuf::Message
   void _internal_set_price(double value);
 
   public:
-  // int64 volume = 2;
+  // double volume = 2;
   void clear_volume() ;
-  ::int64_t volume() const;
-  void set_volume(::int64_t value);
+  double volume() const;
+  void set_volume(double value);
 
   private:
-  ::int64_t _internal_volume() const;
-  void _internal_set_volume(::int64_t value);
+  double _internal_volume() const;
+  void _internal_set_volume(double value);
 
   public:
   // @@protoc_insertion_point(class_scope:orderbook.Order)
@@ -672,7 +672,7 @@ class Order final : public ::google::protobuf::Message
                           ::google::protobuf::Arena* arena, const Impl_& from,
                           const Order& from_msg);
     double price_;
-    ::int64_t volume_;
+    double volume_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -1189,24 +1189,24 @@ inline void Order::_internal_set_price(double value) {
   _impl_.price_ = value;
 }
 
-// int64 volume = 2;
+// double volume = 2;
 inline void Order::clear_volume() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.volume_ = ::int64_t{0};
+  _impl_.volume_ = 0;
 }
-inline ::int64_t Order::volume() const {
+inline double Order::volume() const {
   // @@protoc_insertion_point(field_get:orderbook.Order.volume)
   return _internal_volume();
 }
-inline void Order::set_volume(::int64_t value) {
+inline void Order::set_volume(double value) {
   _internal_set_volume(value);
   // @@protoc_insertion_point(field_set:orderbook.Order.volume)
 }
-inline ::int64_t Order::_internal_volume() const {
+inline double Order::_internal_volume() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
   return _impl_.volume_;
 }
-inline void Order::_internal_set_volume(::int64_t value) {
+inline void Order::_internal_set_volume(double value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.volume_ = value;
 }

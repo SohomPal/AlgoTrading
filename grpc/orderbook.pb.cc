@@ -81,7 +81,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
 inline constexpr Order::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : price_{0},
-        volume_{::int64_t{0}},
+        volume_{0},
         _cached_size_{0} {}
 
 template <typename>
@@ -232,7 +232,7 @@ const char descriptor_table_protodef_orderbook_2eproto[] ABSL_ATTRIBUTE_SECTION_
     protodesc_cold) = {
     "\n\017orderbook.proto\022\torderbook\"\007\n\005Empty\"\"\n"
     "\020OrderBookRequest\022\016\n\006symbol\030\001 \001(\t\"&\n\005Ord"
-    "er\022\r\n\005price\030\001 \001(\001\022\016\n\006volume\030\002 \001(\003\"\232\001\n\021Or"
+    "er\022\r\n\005price\030\001 \001(\001\022\016\n\006volume\030\002 \001(\001\"\232\001\n\021Or"
     "derBookResponse\022\016\n\006symbol\030\001 \001(\t\022\036\n\004bids\030"
     "\002 \003(\0132\020.orderbook.Order\022\036\n\004asks\030\003 \003(\0132\020."
     "orderbook.Order\022\020\n\010best_bid\030\004 \001(\001\022\020\n\010bes"
@@ -694,9 +694,9 @@ const ::_pbi::TcParseTable<1, 2, 0, 0, 2> Order::_table_ = {
     ::_pbi::TcParser::GetTable<::orderbook::Order>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // int64 volume = 2;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(Order, _impl_.volume_), 63>(),
-     {16, 63, 0, PROTOBUF_FIELD_OFFSET(Order, _impl_.volume_)}},
+    // double volume = 2;
+    {::_pbi::TcParser::FastF64S1,
+     {17, 63, 0, PROTOBUF_FIELD_OFFSET(Order, _impl_.volume_)}},
     // double price = 1;
     {::_pbi::TcParser::FastF64S1,
      {9, 63, 0, PROTOBUF_FIELD_OFFSET(Order, _impl_.price_)}},
@@ -706,9 +706,9 @@ const ::_pbi::TcParseTable<1, 2, 0, 0, 2> Order::_table_ = {
     // double price = 1;
     {PROTOBUF_FIELD_OFFSET(Order, _impl_.price_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kDouble)},
-    // int64 volume = 2;
+    // double volume = 2;
     {PROTOBUF_FIELD_OFFSET(Order, _impl_.volume_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kInt64)},
+    (0 | ::_fl::kFcSingular | ::_fl::kDouble)},
   }},
   // no aux_entries
   {{
@@ -750,11 +750,11 @@ PROTOBUF_NOINLINE void Order::Clear() {
                 1, this_._internal_price(), target);
           }
 
-          // int64 volume = 2;
-          if (this_._internal_volume() != 0) {
-            target = ::google::protobuf::internal::WireFormatLite::
-                WriteInt64ToArrayWithField<2>(
-                    stream, this_._internal_volume(), target);
+          // double volume = 2;
+          if (::absl::bit_cast<::uint64_t>(this_._internal_volume()) != 0) {
+            target = stream->EnsureSpace(target);
+            target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+                2, this_._internal_volume(), target);
           }
 
           if (PROTOBUF_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -786,10 +786,9 @@ PROTOBUF_NOINLINE void Order::Clear() {
             if (::absl::bit_cast<::uint64_t>(this_._internal_price()) != 0) {
               total_size += 9;
             }
-            // int64 volume = 2;
-            if (this_._internal_volume() != 0) {
-              total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
-                  this_._internal_volume());
+            // double volume = 2;
+            if (::absl::bit_cast<::uint64_t>(this_._internal_volume()) != 0) {
+              total_size += 9;
             }
           }
           return this_.MaybeComputeUnknownFieldsSize(total_size,
@@ -807,7 +806,7 @@ void Order::MergeImpl(::google::protobuf::MessageLite& to_msg, const ::google::p
   if (::absl::bit_cast<::uint64_t>(from._internal_price()) != 0) {
     _this->_impl_.price_ = from._impl_.price_;
   }
-  if (from._internal_volume() != 0) {
+  if (::absl::bit_cast<::uint64_t>(from._internal_volume()) != 0) {
     _this->_impl_.volume_ = from._impl_.volume_;
   }
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
