@@ -1,6 +1,6 @@
 find_package(OpenSSL REQUIRED)
 cmake_minimum_required(VERSION 3.15)
-project(sfox_data_collector)
+project(AlgoTrader)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -41,7 +41,7 @@ include_directories(
 
 link_directories(/opt/homebrew/lib)
 
-add_executable(sfox_data_collector
+add_executable(AlgoTrader
     src/main.cpp
     src/WebSocketClient.cpp
     src/trading/Order.cpp
@@ -50,7 +50,7 @@ add_executable(sfox_data_collector
     ${GRPC_SOURCES}
 )
 
-target_link_libraries(sfox_data_collector
+target_link_libraries(AlgoTrader
     pthread
     grpc++        # gRPC C++ library
     grpc

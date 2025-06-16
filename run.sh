@@ -2,7 +2,7 @@
 
 set -e
 
-EXECUTABLE="./build/sfox_data_collector"
+EXECUTABLE="./build/AlgoTrader"
 
 if [ ! -f "$EXECUTABLE" ]; then
   echo "Error: Executable not found at $EXECUTABLE"

@@ -93,7 +93,7 @@ int main() {
     WebSocketClient client;
     
     // Define instruments to connect to
-    std::vector<std::string> instruments = {"ethbtc", "btcusd"};
+    std::vector<std::string> instruments = {"ethusd", "btcusd", "dogeusd", "ltcusd", "xrpusd", "bchusd", "solusd", "adausd", "dotusd", "linkusd"};
     
     std::cout << "🚀 Starting WebSocket client with instruments: ";
     for (const auto& instrument : instruments) {
