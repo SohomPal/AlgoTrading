@@ -1,0 +1,34 @@
+/Users/sohompal/Documents/TradingApplication/AlgoTrading/src/WebSocketClient.cpp:205:81: error: variable 'DEPTH_LIMIT' cannot be implicitly captured in a lambda with no capture-default specified
+  205 |                             for (size_t i = 0; i < std::min(sorted_bids.size(), DEPTH_LIMIT); ++i) {
+      |                                                                                 ^
+/Users/sohompal/Documents/TradingApplication/AlgoTrading/src/WebSocketClient.cpp:166:26: note: 'DEPTH_LIMIT' declared here
+  166 |             const size_t DEPTH_LIMIT = 10;
+      |                          ^
+/Users/sohompal/Documents/TradingApplication/AlgoTrading/src/WebSocketClient.cpp:168:35: note: lambda expression begins here
+  168 |             c.set_message_handler([&instrument, &is_connected, &is_authenticated](websocketpp::connection_hdl hdl, message_ptr msg) {
+      |                                   ^
+/Users/sohompal/Documents/TradingApplication/AlgoTrading/src/WebSocketClient.cpp:168:81: note: capture 'DEPTH_LIMIT' by value
+  168 |             c.set_message_handler([&instrument, &is_connected, &is_authenticated](websocketpp::connection_hdl hdl, message_ptr msg) {
+      |                                                                                 ^
+      |                                                                                 , DEPTH_LIMIT
+/Users/sohompal/Documents/TradingApplication/AlgoTrading/src/WebSocketClient.cpp:168:81: note: capture 'DEPTH_LIMIT' by reference
+  168 |             c.set_message_handler([&instrument, &is_connected, &is_authenticated](websocketpp::connection_hdl hdl, message_ptr msg) {
+      |                                                                                 ^
+      |                                                                                 , &DEPTH_LIMIT
+/Users/sohompal/Documents/TradingApplication/AlgoTrading/src/WebSocketClient.cpp:218:81: error: variable 'DEPTH_LIMIT' cannot be implicitly captured in a lambda with no capture-default specified
+  218 |                             for (size_t i = 0; i < std::min(sorted_asks.size(), DEPTH_LIMIT); ++i) {
+      |                                                                                 ^
+/Users/sohompal/Documents/TradingApplication/AlgoTrading/src/WebSocketClient.cpp:166:26: note: 'DEPTH_LIMIT' declared here
+  166 |             const size_t DEPTH_LIMIT = 10;
+      |                          ^
+/Users/sohompal/Documents/TradingApplication/AlgoTrading/src/WebSocketClient.cpp:168:35: note: lambda expression begins here
+  168 |             c.set_message_handler([&instrument, &is_connected, &is_authenticated](websocketpp::connection_hdl hdl, message_ptr msg) {
+      |                                   ^
+/Users/sohompal/Documents/TradingApplication/AlgoTrading/src/WebSocketClient.cpp:168:81: note: capture 'DEPTH_LIMIT' by value
+  168 |             c.set_message_handler([&instrument, &is_connected, &is_authenticated](websocketpp::connection_hdl hdl, message_ptr msg) {
+      |                                                                                 ^
+      |                                                                                 , DEPTH_LIMIT
+/Users/sohompal/Documents/TradingApplication/AlgoTrading/src/WebSocketClient.cpp:168:81: note: capture 'DEPTH_LIMIT' by reference
+  168 |             c.set_message_handler([&instrument, &is_connected, &is_authenticated](websocketpp::connection_hdl hdl, message_ptr msg) {
+      |                                                                                 ^
+      |                                                                                 , &DEPTH_LIMIT

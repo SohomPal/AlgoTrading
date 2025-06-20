@@ -27,22 +27,57 @@ std::mutex output_mutex; // For thread-safe console output
 std::unordered_map<std::string, OrderBook> global_orderbooks;
 std::mutex orderbook_mutex; // For thread-safe orderbook access
 
-// Timeout tracking
-std::unordered_map<std::string, std::atomic<std::chrono::steady_clock::time_point>> last_data_time;
-std::mutex timeout_mutex;
+// Timeout tracking - using regular variables instead of atomics in map
+struct ConnectionState {
+    std::chrono::steady_clock::time_point last_data_time;
+    bool should_stop;
+    std::mutex state_mutex;
+    
+    ConnectionState() : last_data_time(std::chrono::steady_clock::now()), should_stop(false) {}
+    
+    void updateDataTime() {
+        std::lock_guard<std::mutex> lock(state_mutex);
+        last_data_time = std::chrono::steady_clock::now();
+    }
+    
+    std::chrono::steady_clock::time_point getLastDataTime() {
+        std::lock_guard<std::mutex> lock(state_mutex);
+        return last_data_time;
+    }
+    
+    void setShouldStop(bool stop) {
+        std::lock_guard<std::mutex> lock(state_mutex);
+        should_stop = stop;
+    }
+    
+    bool getShouldStop() {
+        std::lock_guard<std::mutex> lock(state_mutex);
+        return should_stop;
+    }
+};
+
+std::unordered_map<std::string, std::unique_ptr<ConnectionState>> connection_states;
+std::mutex connection_states_mutex;
 
 void connectToInstrument(const std::string& instrument) {
     const std::string uri = "wss://ws.sfox.com/ws";
-    const std::chrono::seconds DATA_TIMEOUT(5);
     
-    // Initialize last data time
+    // Initialize connection state
     {
-        std::lock_guard<std::mutex> lock(timeout_mutex);
-        last_data_time[instrument].store(std::chrono::steady_clock::now());
+        std::lock_guard<std::mutex> lock(connection_states_mutex);
+        connection_states[instrument] = std::make_unique<ConnectionState>();
     }
 
     while (true) {
         try {
+            // Check if we should stop
+            {
+                std::lock_guard<std::mutex> lock(connection_states_mutex);
+                if (connection_states[instrument]->getShouldStop()) {
+                    break;
+                }
+            }
+
             client c;
             c.init_asio();
             
@@ -50,7 +85,7 @@ void connectToInstrument(const std::string& instrument) {
             c.set_access_channels(websocketpp::log::alevel::none);
             c.set_error_channels(websocketpp::log::elevel::none);
 
-            c.set_tls_init_handler([&instrument](websocketpp::connection_hdl) {
+            c.set_tls_init_handler([&instrument](websocketpp::connection_hdl) -> websocketpp::lib::shared_ptr<asio::ssl::context> {
                 try {
                     auto ctx = websocketpp::lib::make_shared<asio::ssl::context>(asio::ssl::context::tlsv12_client);
                     ctx->set_options(asio::ssl::context::default_workarounds |
@@ -65,23 +100,25 @@ void connectToInstrument(const std::string& instrument) {
                 }
             });
 
-            // Flag to track if we're connected and authenticated
-            auto connected = std::make_shared<std::atomic<bool>>(false);
-            auto authenticated = std::make_shared<std::atomic<bool>>(false);
+            // Simple connection tracking
+            bool is_connected = false;
+            bool is_authenticated = false;
 
-            c.set_open_handler([&c, &instrument, connected, authenticated](websocketpp::connection_hdl hdl) {
+            c.set_open_handler([&c, &instrument, &is_connected, &is_authenticated](websocketpp::connection_hdl hdl) {
                 try {
                     {
                         std::lock_guard<std::mutex> lock(output_mutex);
                         std::cout << "🔗 Connected to sFOX WebSocket for instrument: " << instrument << "\n";
                     }
                     
-                    connected->store(true);
+                    is_connected = true;
                     
                     // Update last data time on connection
                     {
-                        std::lock_guard<std::mutex> lock(timeout_mutex);
-                        last_data_time[instrument].store(std::chrono::steady_clock::now());
+                        std::lock_guard<std::mutex> lock(connection_states_mutex);
+                        if (connection_states.find(instrument) != connection_states.end()) {
+                            connection_states[instrument]->updateDataTime();
+                        }
                     }
 
                     auto config = loadConfig("config.cfg");
@@ -116,23 +153,25 @@ void connectToInstrument(const std::string& instrument) {
                         return;
                     }
                     
-                    authenticated->store(true);
+                    is_authenticated = true;
                     
                 } catch (const std::exception& e) {
                     std::lock_guard<std::mutex> lock(output_mutex);
                     std::cerr << "❌ [" << instrument << "] Error in open handler: " << e.what() << "\n";
-                    connected->store(false);
+                    is_connected = false;
                 }
             });
 
             const size_t DEPTH_LIMIT = 10;
 
-            c.set_message_handler([&, instrument, connected, authenticated](websocketpp::connection_hdl hdl, message_ptr msg) {
+            c.set_message_handler([&instrument, &is_connected, &is_authenticated, DEPTH_LIMIT](websocketpp::connection_hdl hdl, message_ptr msg) {
                 try {
                     // Update last data time
                     {
-                        std::lock_guard<std::mutex> lock(timeout_mutex);
-                        last_data_time[instrument].store(std::chrono::steady_clock::now());
+                        std::lock_guard<std::mutex> lock(connection_states_mutex);
+                        if (connection_states.find(instrument) != connection_states.end()) {
+                            connection_states[instrument]->updateDataTime();
+                        }
                     }
 
                     auto payload = json::parse(msg->get_payload());
@@ -145,7 +184,6 @@ void connectToInstrument(const std::string& instrument) {
                         } else {
                             std::lock_guard<std::mutex> lock(output_mutex);
                             std::cerr << "❌ [" << instrument << "] Authentication failed\n";
-                            c.close(hdl, websocketpp::close::status::protocol_error, "Auth failed");
                             return;
                         }
                     }
@@ -209,20 +247,17 @@ void connectToInstrument(const std::string& instrument) {
                 }
             });
 
-            c.set_fail_handler([&instrument, &connected](websocketpp::connection_hdl) {
+            c.set_fail_handler([&instrument, &is_connected](websocketpp::connection_hdl) {
                 std::lock_guard<std::mutex> lock(output_mutex);
                 std::cerr << "❌ [" << instrument << "] WebSocket connection failed. Will retry.\n";
-                connected->store(false);
+                is_connected = false;
             });
 
-            c.set_close_handler([&instrument, &connected](websocketpp::connection_hdl) {
+            c.set_close_handler([&instrument, &is_connected](websocketpp::connection_hdl) {
                 std::lock_guard<std::mutex> lock(output_mutex);
                 std::cerr << "🔌 [" << instrument << "] WebSocket closed. Will reconnect.\n";
-                connected->store(false);
+                is_connected = false;
             });
-
-            // Remove the interrupt handler as it's not compatible with this websocketpp version
-            // The connection will be monitored by the timeout thread instead
 
             websocketpp::lib::error_code ec;
             client::connection_ptr con = c.get_connection(uri, ec);
@@ -235,35 +270,32 @@ void connectToInstrument(const std::string& instrument) {
 
             c.connect(con);
 
-            // Start timeout monitoring thread
-            std::thread timeout_thread([&instrument, &c, con, connected, authenticated, DATA_TIMEOUT]() {
-                while (connected->load()) {
+            // Start reconnection timer thread (30 minutes)
+            bool timer_thread_running = true;
+            auto connection_start_time = std::chrono::steady_clock::now();
+            const std::chrono::minutes RECONNECT_INTERVAL(30);
+            
+            std::thread timer_thread([&instrument, &c, con, &is_connected, &timer_thread_running, RECONNECT_INTERVAL, connection_start_time]() {
+                while (timer_thread_running && is_connected) {
                     std::this_thread::sleep_for(std::chrono::seconds(1));
                     
-                    if (!connected->load()) break;
+                    if (!timer_thread_running || !is_connected) break;
                     
                     auto now = std::chrono::steady_clock::now();
-                    std::chrono::steady_clock::time_point last_time;
+                    auto elapsed = now - connection_start_time;
                     
-                    {
-                        std::lock_guard<std::mutex> lock(timeout_mutex);
-                        last_time = last_data_time[instrument].load();
-                    }
-                    
-                    if (now - last_time > DATA_TIMEOUT) {
+                    if (elapsed >= RECONNECT_INTERVAL) {
                         std::lock_guard<std::mutex> lock(output_mutex);
-                        std::cerr << "⏰ [" << instrument << "] No data received for " 
-                                  << std::chrono::duration_cast<std::chrono::seconds>(now - last_time).count() 
-                                  << " seconds. Forcing reconnection.\n";
+                        std::cout << "🔄 [" << instrument << "] 30 minutes elapsed. Forcing reconnection for connection refresh.\n";
                         
                         try {
-                            c.close(con, websocketpp::close::status::going_away, "Data timeout");
+                            c.close(con, websocketpp::close::status::going_away, "Scheduled reconnection");
                         } catch (const std::exception& e) {
                             std::lock_guard<std::mutex> lock2(output_mutex);
-                            std::cerr << "❌ [" << instrument << "] Error closing connection on timeout: " 
+                            std::cerr << "❌ [" << instrument << "] Error closing connection on scheduled reconnection: " 
                                       << e.what() << "\n";
                         }
-                        connected->store(false);
+                        is_connected = false;
                         break;
                     }
                 }
@@ -274,22 +306,17 @@ void connectToInstrument(const std::string& instrument) {
             } catch (const websocketpp::exception& e) {
                 std::lock_guard<std::mutex> lock(output_mutex);
                 std::cerr << "❌ [" << instrument << "] WebSocket++ exception: " << e.what() << "\n";
-            } catch (const asio::system_error& e) {
-                std::lock_guard<std::mutex> lock(output_mutex);
-                std::cerr << "❌ [" << instrument << "] ASIO system error: " << e.what() << " (code: " << e.code() << ")\n";
-            } catch (const std::runtime_error& e) {
-                std::lock_guard<std::mutex> lock(output_mutex);
-                std::cerr << "❌ [" << instrument << "] Runtime error: " << e.what() << "\n";
             } catch (const std::exception& e) {
                 std::lock_guard<std::mutex> lock(output_mutex);
-                std::cerr << "❌ [" << instrument << "] Unexpected exception: " << e.what() << "\n";
+                std::cerr << "❌ [" << instrument << "] Exception in run(): " << e.what() << "\n";
             }
 
-            connected->store(false);
+            is_connected = false;
+            timer_thread_running = false;
             
-            // Wait for timeout thread to finish
-            if (timeout_thread.joinable()) {
-                timeout_thread.join();
+            // Wait for timer thread to finish
+            if (timer_thread.joinable()) {
+                timer_thread.join();
             }
 
         } catch (const std::bad_alloc& e) {
@@ -306,6 +333,15 @@ void connectToInstrument(const std::string& instrument) {
             std::cerr << "⚠️ [" << instrument << "] Unknown exception in WebSocket loop\n";
         }
 
+        // Check if we should stop before reconnecting
+        {
+            std::lock_guard<std::mutex> lock(connection_states_mutex);
+            if (connection_states.find(instrument) != connection_states.end() && 
+                connection_states[instrument]->getShouldStop()) {
+                break;
+            }
+        }
+
         // Exponential backoff for reconnection
         static thread_local int retry_count = 0;
         int delay = std::min(2 * (1 << retry_count), 30); // Max 30 seconds
@@ -314,6 +350,12 @@ void connectToInstrument(const std::string& instrument) {
         std::this_thread::sleep_for(std::chrono::seconds(delay));
         std::lock_guard<std::mutex> lock(output_mutex);
         std::cout << "🔁 [" << instrument << "] Attempting reconnect in " << delay << " seconds...\n";
+    }
+    
+    // Clean up connection state
+    {
+        std::lock_guard<std::mutex> lock(connection_states_mutex);
+        connection_states.erase(instrument);
     }
 }
 
@@ -328,13 +370,13 @@ void WebSocketClient::connect(const std::vector<std::string>& instruments) {
     
     std::cout << "🚀 Starting " << max_connections << " WebSocket connections...\n";
     
-    // Initialize orderbooks and timeout tracking for each instrument
+    // Initialize orderbooks and connection states for each instrument
     {
         std::lock_guard<std::mutex> lock(orderbook_mutex);
-        std::lock_guard<std::mutex> timeout_lock(timeout_mutex);
+        std::lock_guard<std::mutex> state_lock(connection_states_mutex);
         for (size_t i = 0; i < max_connections; ++i) {
             global_orderbooks[instruments[i]] = OrderBook();
-            last_data_time[instruments[i]].store(std::chrono::steady_clock::now());
+            connection_states[instruments[i]] = std::make_unique<ConnectionState>();
         }
     }
     
