@@ -93,7 +93,8 @@ int main() {
     WebSocketClient client;
     
     // Define instruments to connect to
-    std::vector<std::string> instruments = {"ethusd", "btcusd", "dogeusd", "ltcusd", "xrpusd", "bchusd", "solusd", "adausd", "dotusd", "linkusd"};
+    std::vector<std::string> instruments = {"ethusd", "btcusd", "dogeusd"};
+    // Some other possible instruments: "ltcusd", "xrpusd", "bchusd", "solusd", "adausd", "dotusd", "linkusd"
     
     std::cout << "🚀 Starting WebSocket client with instruments: ";
     for (const auto& instrument : instruments) {
@@ -113,7 +114,7 @@ int main() {
     std::thread grpc_thread(RunServer);
     
     // Start monitoring orderbooks in a separate thread
-    std::thread monitor_thread(monitorOrderBooks, instruments);
+    //std::thread monitor_thread(monitorOrderBooks, instruments);
     
     std::cout << "🎯 All services started successfully!\n";
     std::cout << "   - WebSocket connections: Running\n";
@@ -128,7 +129,7 @@ int main() {
     // Clean up threads (this will never be reached due to infinite loop above)
     if (connection_thread.joinable()) connection_thread.join();
     if (grpc_thread.joinable()) grpc_thread.join();
-    if (monitor_thread.joinable()) monitor_thread.join();
+    //if (monitor_thread.joinable()) monitor_thread.join();
     
     return 0;
 }
