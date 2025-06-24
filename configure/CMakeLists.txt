@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Protobuf REQUIRED)
-find_package(Protobuf REQUIRED)
-find_package(gRPC REQUIRED)
 
 # Add protobuf and grpc generated sources
 set(GRPC_SOURCES
@@ -41,10 +39,13 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/include  # << the new standalone Asio
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/json
     ${CMAKE_CURRENT_SOURCE_DIR}/grpc
+    /usr/include
 )
 
 include_directories(${Protobuf_INCLUDE_DIRS})
 include_directories(${gRPC_INCLUDE_DIRS})
+
+link_directories(/usr/include)
 
 add_executable(AlgoTrader
     src/main.cpp
