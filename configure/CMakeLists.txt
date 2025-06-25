@@ -16,15 +16,19 @@ set(GRPC_SOURCES
 # Define all absll dependencies
 set(ABSL_DEPS
     # Comprehensive Abseil linking:
-    absl_log_internal_message
-    absl_log_internal_check_op  
-    absl_log_internal_nullguard
-    absl_cord
-    absl_cordz_info
-    absl_strings
-    absl_synchronization
-    absl_time
-    absl_base
+    absl::base
+    absl::strings
+    absl::synchronization
+    absl::time
+    absl::status
+    absl::hash
+    absl::log_internal_check_op
+    absl::log_internal_message
+    absl::int128
+    absl::symbolize
+    absl::stacktrace
+    absl::leak_check
+    absl::cctz
 )
 
 # Enable standalone Asio (NO Boost)
@@ -39,13 +43,14 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/include  # << the new standalone Asio
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/json
     ${CMAKE_CURRENT_SOURCE_DIR}/grpc
-    /usr/include
+    /usr/local/include
 )
 
 include_directories(${Protobuf_INCLUDE_DIRS})
 include_directories(${gRPC_INCLUDE_DIRS})
 
-link_directories(/usr/include)
+link_directories(/usr/local/include)
+link_directories(/usr/local/lib)
 
 add_executable(AlgoTrader
     src/main.cpp
