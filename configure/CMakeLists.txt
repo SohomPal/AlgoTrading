@@ -15,28 +15,7 @@ set(GRPC_SOURCES
 )
 
 # Define all absll dependencies
-set(ABSL_DEPS
-    # Comprehensive Abseil linking:
-    absl::base
-    absl::strings
-    absl::synchronization
-    absl::time
-    absl::status
-    absl::hash
-    absl::int128
-    absl::symbolize
-    absl::stacktrace
-    absl::leak_check
-
-    # Add these manually — replace with correct full paths if necessary
-    /usr/local/lib/libabsl_log_internal_message.a
-    /usr/local/lib/libabsl_log_internal_check_op.a
-    /usr/local/lib/libabsl_log_internal_nullguard.a
-    /usr/local/lib/libabsl_cord.a
-    /usr/local/lib/libabsl_cord_internal.a
-    /usr/local/lib/libabsl_malloc_internal.a
-    /usr/local/lib/libabsl_synchronization.a
-)
+file(GLOB ABSL_LIBS "/usr/local/lib/libabsl_*.a")
 
 # Enable standalone Asio (NO Boost)
 add_definitions(-DASIO_STANDALONE -D_WEBSOCKETPP_CPP11_STL_)
@@ -76,5 +55,6 @@ target_link_libraries(AlgoTrader
     protobuf      # Protobuf library
     OpenSSL::SSL
     OpenSSL::Crypto
-    ${ABSL_DEPS}  # Abseil dependencies
+    
+    ${ABSL_LIBS}  # Link every Abseil static lib in /usr/local/lib/
 )
