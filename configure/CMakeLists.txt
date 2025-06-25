@@ -23,14 +23,19 @@ set(ABSL_DEPS
     absl::time
     absl::status
     absl::hash
-    absl::log_internal_check_op
-    absl::log_internal_message
-    absl::log_internal_nullguard
     absl::int128
     absl::symbolize
     absl::stacktrace
     absl::leak_check
-    absl::cctz
+
+    # Add these manually — replace with correct full paths if necessary
+    /usr/local/lib/libabsl_log_internal_message.a
+    /usr/local/lib/libabsl_log_internal_check_op.a
+    /usr/local/lib/libabsl_log_internal_nullguard.a
+    /usr/local/lib/libabsl_cord.a
+    /usr/local/lib/libabsl_cord_internal.a
+    /usr/local/lib/libabsl_malloc_internal.a
+    /usr/local/lib/libabsl_mutex.a
 )
 
 # Enable standalone Asio (NO Boost)
