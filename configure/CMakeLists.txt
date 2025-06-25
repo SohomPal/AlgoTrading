@@ -35,7 +35,7 @@ set(ABSL_DEPS
     /usr/local/lib/libabsl_cord.a
     /usr/local/lib/libabsl_cord_internal.a
     /usr/local/lib/libabsl_malloc_internal.a
-    /usr/local/lib/libabsl_mutex.a
+    /usr/local/lib/libabsl_synchronization.a
 )
 
 # Enable standalone Asio (NO Boost)
