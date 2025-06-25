@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Protobuf REQUIRED)
+find_package(absl REQUIRED)
 
 # Add protobuf and grpc generated sources
 set(GRPC_SOURCES
@@ -24,6 +25,7 @@ set(ABSL_DEPS
     absl::hash
     absl::log_internal_check_op
     absl::log_internal_message
+    absl::log_internal_nullguard
     absl::int128
     absl::symbolize
     absl::stacktrace
