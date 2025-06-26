@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Protobuf REQUIRED)
-find_package(absl REQUIRED)
+
 
 # Add protobuf and grpc generated sources
 set(GRPC_SOURCES
@@ -15,7 +15,18 @@ set(GRPC_SOURCES
 )
 
 # Define all absll dependencies
-file(GLOB ABSL_LIBS "/usr/local/lib/libabsl_*.a")
+set(ABSL_DEPS
+    # Comprehensive Abseil linking:
+    absl_log_internal_message
+    absl_log_internal_check_op  
+    absl_log_internal_nullguard
+    absl_cord
+    absl_cordz_info
+    absl_strings
+    absl_synchronization
+    absl_time
+    absl_base
+)
 
 # Enable standalone Asio (NO Boost)
 add_definitions(-DASIO_STANDALONE -D_WEBSOCKETPP_CPP11_STL_)
@@ -29,13 +40,13 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/include  # << the new standalone Asio
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/json
     ${CMAKE_CURRENT_SOURCE_DIR}/grpc
-    /usr/local/include
+    /usr/local/include/absl
 )
 
 include_directories(${Protobuf_INCLUDE_DIRS})
 include_directories(${gRPC_INCLUDE_DIRS})
 
-link_directories(/usr/local/include)
+link_directories(/usr/local/include/absl)
 link_directories(/usr/local/lib)
 
 add_executable(AlgoTrader
@@ -55,6 +66,5 @@ target_link_libraries(AlgoTrader
     protobuf      # Protobuf library
     OpenSSL::SSL
     OpenSSL::Crypto
-    
-    ${ABSL_LIBS}  # Link every Abseil static lib in /usr/local/lib/
+    ${ABSL_DEPS}  # Abseil dependencies
 )
