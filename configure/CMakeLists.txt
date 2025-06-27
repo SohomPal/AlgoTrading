@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
 project(AlgoTrader LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -41,16 +41,13 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/json
     ${CMAKE_CURRENT_SOURCE_DIR}/grpc
     /usr/local/include
-    /home/linuxbrew/.linuxbrew/include/
 )
 
 include_directories(${Protobuf_INCLUDE_DIRS})
 include_directories(${gRPC_INCLUDE_DIRS})
 
 link_directories(/usr/local)
-link_directories(/home/linuxbrew/.linuxbrew/include/)
 link_directories(/usr/local/lib)
-link_directories(/home/linuxbrew/.linuxbrew/lib)
 
 add_executable(AlgoTrader
     src/main.cpp
