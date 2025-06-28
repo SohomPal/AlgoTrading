@@ -16,7 +16,7 @@ sudo apt install -y build-essential autoconf libtool pkg-config \
 # unzip protoc-30.2-linux-x86_64.zip -d $HOME/.local
 # export PATH="/usr/local/bin:$PATH"
 # rm protoc-30.2-linux-x86_64.zip
-
+# make sure to link flags_commandlineflag_internal
 echo "✅ Basic dependencies installed."
 
 # Step 2: Build and install gRPC from source

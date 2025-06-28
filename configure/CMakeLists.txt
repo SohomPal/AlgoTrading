@@ -1,70 +1,64 @@
 cmake_minimum_required(VERSION 3.16)
-project(AlgoTrader LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-
 find_package(OpenSSL REQUIRED)
-find_package(Threads REQUIRED)
-find_package(Protobuf REQUIRED)
 
+project(AlgoTrader C CXX)
 
-# Add protobuf and grpc generated sources
-set(GRPC_SOURCES
-    grpc/orderbook.pb.cc
-    grpc/orderbook.grpc.pb.cc
+# Load gRPC's shared CMake config
+include(../cmake/common.cmake)
+
+# === Proto Setup ===
+get_filename_component(proto_file "../../orderbook.proto" ABSOLUTE)
+get_filename_component(proto_dir "${proto_file}" PATH)
+
+set(proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/orderbook.pb.cc")
+set(proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/orderbook.pb.h")
+set(grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/orderbook.grpc.pb.cc")
+set(grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/orderbook.grpc.pb.h")
+
+add_custom_command(
+  OUTPUT "${proto_srcs}" "${proto_hdrs}" "${grpc_srcs}" "${grpc_hdrs}"
+  COMMAND ${_PROTOBUF_PROTOC}
+  ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
+       --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+       -I "${proto_dir}"
+       --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
+       "${proto_file}"
+  DEPENDS "${proto_file}"
 )
 
-# Define all absll dependencies
-set(ABSL_DEPS
-    # Comprehensive Abseil linking:
-    absl_log_internal_message
-    absl_log_internal_check_op  
-    absl_log_internal_nullguard
-    absl_cord
-    absl_cordz_info
-    absl_strings
-    absl_synchronization
-    absl_time
-    absl_base
+# Include generated headers
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+# === Project Source Files ===
+set(SOURCES
+  ../../src/main.cpp
+  ../../src/WebSocketClient.cpp
+  ../../src/OrderBookServer.cpp
+  ../../src/trading/Order.cpp
+  ../../src/trading/OrderBook.cpp
+  ${proto_srcs}
+  ${grpc_srcs}
 )
 
-# Enable standalone Asio (NO Boost)
-add_definitions(-DASIO_STANDALONE -D_WEBSOCKETPP_CPP11_STL_)
-
-# Ignore deprecation warnings from WebSocket++ and Asio
-add_compile_options(-Wno-deprecated-declarations)
-
+# === Header Paths ===
 include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/websocketpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/asio/include  # << the new standalone Asio
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/json
-    ${CMAKE_CURRENT_SOURCE_DIR}/grpc
-    /usr/local/include
+  ../../include
+  ../../third_party/websocketpp
+  ../../third_party/asio/include
+  ../../third_party/json
 )
 
-include_directories(${Protobuf_INCLUDE_DIRS})
-include_directories(${gRPC_INCLUDE_DIRS})
+# === Build Target ===
+add_executable(AlgoTrader ${SOURCES})
 
-link_directories(/usr/local)
-link_directories(/usr/local/lib)
-
-add_executable(AlgoTrader
-    src/main.cpp
-    src/WebSocketClient.cpp
-    src/trading/Order.cpp
-    src/trading/OrderBook.cpp
-    src/OrderBookServer.cpp
-    ${GRPC_SOURCES}
-)
-
+# === Link with Dependencies ===
 target_link_libraries(AlgoTrader
-    pthread
-    grpc++        # gRPC C++ library
-    grpc
-    gpr
-    protobuf      # Protobuf library
-    OpenSSL::SSL
-    OpenSSL::Crypto
-    ${ABSL_DEPS}  # Abseil dependencies
+  ${_GRPC_GRPCPP}
+  ${_PROTOBUF_LIBPROTOBUF}
+  absl::log_initialize
+  absl::flags
+  absl::flags_parse
+  pthread
+  ssl
+  crypto
 )
