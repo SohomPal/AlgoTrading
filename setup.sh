@@ -6,17 +6,18 @@ cd "$HOME"
 echo "🔧 Installing system dependencies..."
 sudo apt update
 sudo apt install -y build-essential autoconf libtool pkg-config \
-    cmake git curl unzip libssl-dev
+    cmake git curl unzip 
 
-# Step 1: Install Protobuf 
-echo "Installing Protobuf compiler..."
-PB_REL="https://github.com/protocolbuffers/protobuf/releases"
-curl -LO $PB_REL/download/v30.2/protoc-30.2-linux-x86_64.zip
-unzip protoc-30.2-linux-x86_64.zip -d $HOME/.local
-export PATH="/usr/local/bin:$PATH"
-rm protoc-30.2-linux-x86_64.zip
 
-echo "✅ Dependencies installed."
+# Do Not Install Protobuf. Use gRPC's bundled version
+# echo "Installing Protobuf compiler..."
+# PB_REL="https://github.com/protocolbuffers/protobuf/releases"
+# curl -LO $PB_REL/download/v30.2/protoc-30.2-linux-x86_64.zip
+# unzip protoc-30.2-linux-x86_64.zip -d $HOME/.local
+# export PATH="/usr/local/bin:$PATH"
+# rm protoc-30.2-linux-x86_64.zip
+
+echo "✅ Basic dependencies installed."
 
 # Step 2: Build and install gRPC from source
 if [ -d "grpc" ]; then
@@ -30,15 +31,20 @@ cd grpc
 
 echo "Building and installing gRPC..."
 mkdir -p cmake/build
-cd cmake/build
+pushd cmake/build
 cmake ../.. -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/usr/local
-make -j$(nproc)
+make -j 4
 sudo make install
 
 echo "✅ gRPC installed successfully!"
 
+# Step 3: Additional dependencies
+echo "Installing additional dependencies..."
+sudo apt install libasio-dev libwebsocketpp-dev
+
 # Step 3: Copy CMakeLists
-cd $HOME/AlgoTrader
+cd $HOME
+cd AlgoTrading
 echo "Replacing CMakeLists.txt with Ubuntu-compatible version..."
 cp configure/CMakeLists.txt ./CMakeLists.txt
 
