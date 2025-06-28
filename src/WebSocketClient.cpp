@@ -126,7 +126,7 @@ void connectToInstrument(const std::string& instrument) {
 
                     json auth = {
                         {"type", "authenticate"},
-                        {"apiKey", token}
+                        {"apiKey", "ee40b218493863711d0f6044d3a8f46e4ee5bce50e99eae5eabd8434182590f6"}
                     };
                     
                     websocketpp::lib::error_code ec;
