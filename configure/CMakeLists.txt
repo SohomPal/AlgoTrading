@@ -1,57 +1,57 @@
 cmake_minimum_required(VERSION 3.16)
-find_package(OpenSSL REQUIRED)
-
 project(AlgoTrader C CXX)
 
-# Load gRPC's shared CMake config
-include(../cmake/common.cmake)
+find_package(OpenSSL REQUIRED)
 
-# === Proto Setup ===
-get_filename_component(proto_file "../../orderbook.proto" ABSOLUTE)
-get_filename_component(proto_dir "${proto_file}" PATH)
+# === Define Root Paths ===
+set(PROJECT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
+set(GRPC_DIR "${PROJECT_ROOT}/grpc")
+set(PROTO_FILE "${GRPC_DIR}/orderbook.proto")
 
-set(proto_srcs "${CMAKE_CURRENT_BINARY_DIR}/orderbook.pb.cc")
-set(proto_hdrs "${CMAKE_CURRENT_BINARY_DIR}/orderbook.pb.h")
-set(grpc_srcs "${CMAKE_CURRENT_BINARY_DIR}/orderbook.grpc.pb.cc")
-set(grpc_hdrs "${CMAKE_CURRENT_BINARY_DIR}/orderbook.grpc.pb.h")
+# === Load gRPC's common settings (from official gRPC repo) ===
+include("${PROJECT_ROOT}/cmake/common.cmake")
+
+# === Proto Compilation Output Files ===
+set(PROTO_SRCS "${GRPC_DIR}/orderbook.pb.cc")
+set(PROTO_HDRS "${GRPC_DIR}/orderbook.pb.h")
+set(GRPC_SRCS "${GRPC_DIR}/orderbook.grpc.pb.cc")
+set(GRPC_HDRS "${GRPC_DIR}/orderbook.grpc.pb.h")
 
 add_custom_command(
-  OUTPUT "${proto_srcs}" "${proto_hdrs}" "${grpc_srcs}" "${grpc_hdrs}"
+  OUTPUT "${PROTO_SRCS}" "${PROTO_HDRS}" "${GRPC_SRCS}" "${GRPC_HDRS}"
   COMMAND ${_PROTOBUF_PROTOC}
-  ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}"
-       --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
-       -I "${proto_dir}"
+  ARGS --grpc_out="${GRPC_DIR}"
+       --cpp_out="${GRPC_DIR}"
+       -I "${GRPC_DIR}"
        --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
-       "${proto_file}"
-  DEPENDS "${proto_file}"
+       "${PROTO_FILE}"
+  DEPENDS "${PROTO_FILE}"
 )
 
-# Include generated headers
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-# === Project Source Files ===
-set(SOURCES
-  ../../src/main.cpp
-  ../../src/WebSocketClient.cpp
-  ../../src/OrderBookServer.cpp
-  ../../src/trading/Order.cpp
-  ../../src/trading/OrderBook.cpp
-  ${proto_srcs}
-  ${grpc_srcs}
-)
-
-# === Header Paths ===
+# === Include Directories ===
 include_directories(
-  ../../include
-  ../../third_party/websocketpp
-  ../../third_party/asio/include
-  ../../third_party/json
+  "${GRPC_DIR}"
+  "${PROJECT_ROOT}/include"
+  "${PROJECT_ROOT}/third_party/websocketpp"
+  "${PROJECT_ROOT}/third_party/asio/include"
+  "${PROJECT_ROOT}/third_party/json"
 )
 
-# === Build Target ===
+# === Source Files ===
+set(SOURCES
+  "${PROJECT_ROOT}/src/main.cpp"
+  "${PROJECT_ROOT}/src/WebSocketClient.cpp"
+  "${PROJECT_ROOT}/src/OrderBookServer.cpp"
+  "${PROJECT_ROOT}/src/trading/Order.cpp"
+  "${PROJECT_ROOT}/src/trading/OrderBook.cpp"
+  ${PROTO_SRCS}
+  ${GRPC_SRCS}
+)
+
+# === Executable Target ===
 add_executable(AlgoTrader ${SOURCES})
 
-# === Link with Dependencies ===
+# === Link Libraries ===
 target_link_libraries(AlgoTrader
   ${_GRPC_GRPCPP}
   ${_PROTOBUF_LIBPROTOBUF}
