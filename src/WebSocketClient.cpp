@@ -85,19 +85,22 @@ void connectToInstrument(const std::string& instrument) {
             c.set_access_channels(websocketpp::log::alevel::none);
             c.set_error_channels(websocketpp::log::elevel::none);
 
-            c.set_tls_init_handler([&instrument](websocketpp::connection_hdl) -> websocketpp::lib::shared_ptr<asio::ssl::context> {
+            c.set_tls_init_handler([](websocketpp::connection_hdl hdl) -> websocketpp::lib::shared_ptr<asio::ssl::context> {
+                auto ctx = websocketpp::lib::make_shared<asio::ssl::context>(asio::ssl::context::sslv23); // More compatible
                 try {
-                    auto ctx = websocketpp::lib::make_shared<asio::ssl::context>(asio::ssl::context::tlsv12_client);
-                    ctx->set_options(asio::ssl::context::default_workarounds |
-                                   asio::ssl::context::no_sslv2 |
-                                   asio::ssl::context::no_sslv3 |
-                                   asio::ssl::context::single_dh_use);
-                    return ctx;
+                    ctx->set_options(
+                        asio::ssl::context::default_workarounds |
+                        asio::ssl::context::no_sslv2 |
+                        asio::ssl::context::no_sslv3 |
+                        asio::ssl::context::no_tlsv1 |
+                        asio::ssl::context::no_tlsv1_1 |
+                        asio::ssl::context::single_dh_use
+                    );
                 } catch (const std::exception& e) {
-                    std::lock_guard<std::mutex> lock(output_mutex);
-                    std::cerr << "❌ [" << instrument << "] TLS initialization error: " << e.what() << "\n";
-                    throw;
+                    std::cerr << "TLS context error: " << e.what() << "\n";
+                    return nullptr; // Optional: could also rethrow
                 }
+                return ctx;
             });
 
             // Simple connection tracking
