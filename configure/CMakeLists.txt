@@ -24,15 +24,15 @@ set(GRPC_SOURCES
 
 # Abseil dependencies
 set(ABSL_DEPS
-    absl_log_internal_message
-    absl_log_internal_check_op  
-    absl_log_internal_nullguard
-    absl_cord
-    absl_cordz_info
-    absl_strings
-    absl_synchronization
-    absl_time
-    absl_base
+    absl::log_internal_message
+    absl::log_internal_check_op  
+    absl::log_internal_nullguard
+    absl::cord
+    absl::cordz_info
+    absl::strings
+    absl::synchronization
+    absl::time
+    absl::base
 )
 
 # Compiler options
